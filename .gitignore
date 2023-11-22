@@ -10,3 +10,6 @@
 
 # 忽略可执行文件
 reader_writer
+
+# 忽略output下的所有文件
+/socket/output/*
