@@ -79,12 +79,13 @@ void *handle_connection(void *socket)
     while(true){
         printf("Client> ");
         scanf("%s", buffer);
+        char *command = buffer;
         char *token = strtok(buffer, " ");
         if(strcmp(token, "help") == 0)
         {
             printf("[+] Commands:\n");
             printf("[+] help: show this help message.\n");
-            printf("[+] upload <filename>: upload file to server.\n");
+            printf("[+] upload: upload file to server.\n");
             printf("[+] download <filename>: download file from server.\n");
             printf("[+] logout: exit the program and logout.\n");
         }
@@ -148,7 +149,7 @@ void *handle_connection(void *socket)
         }
         else
         {
-            send(sock, buffer, strlen(buffer), 0);
+            send(sock, command, strlen(buffer), 0);
             char response[1024] = {0};
             ssize_t len = recv(sock, response, sizeof(response) - 1, 0);
             if (len < 0)

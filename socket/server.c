@@ -78,7 +78,7 @@ bool handle_request(int socket, bool is_admin, char *username)
                 if (file == NULL)
                 {
                     perror("[-] Failed to open file");
-                    exit(EXIT_FAILURE);
+                    // exit(EXIT_FAILURE);
                 }
 
                 char buffer[1024];
@@ -118,7 +118,7 @@ bool handle_request(int socket, bool is_admin, char *username)
                 if (file == NULL)
                 {
                     perror("[-] Failed to open file");
-                    exit(EXIT_FAILURE);
+                    // exit(EXIT_FAILURE);
                 }
 
                 char buffer[1024];
@@ -138,6 +138,7 @@ bool handle_request(int socket, bool is_admin, char *username)
     }
     else
     {
+        printf("[+] Command %s received. \n", command);
         // 送Shell脚本执行
         if (command == NULL)
         {
@@ -150,13 +151,17 @@ bool handle_request(int socket, bool is_admin, char *username)
             if (fp == NULL)
             {
                 perror("[-] Failed to run command");
-                exit(EXIT_FAILURE);
+                // exit(EXIT_FAILURE);
             }
 
-            char buffer[1024];
-            while (fgets(buffer, sizeof(buffer), fp) != NULL)
+            char result[1024];
+            result[0] = '[';
+            result[1] = '+';
+            result[2] = ']';
+
+            while(fgets(result + 3, sizeof(result) - 3, fp) != NULL)
             {
-                send(socket, buffer, strlen(buffer), 0);
+                send(socket, result, strlen(result), 0);
             }
 
             pclose(fp);
@@ -192,7 +197,7 @@ void *handle_client(void *arg)
         if (file == NULL)
         {
             perror("[-] Failed to open file");
-            exit(EXIT_FAILURE);
+            // exit(EXIT_FAILURE);
         }
 
         char stored_username[50];
@@ -218,7 +223,7 @@ void *handle_client(void *arg)
             if (file == NULL)
             {
                 perror("[-] Failed to open file");
-                exit(EXIT_FAILURE);
+                // exit(EXIT_FAILURE);
             }
             int role = USER;
             fprintf(file, "%s %s %d\n", username, password, role);
@@ -238,7 +243,7 @@ void *handle_client(void *arg)
         if (fp == NULL)
         {
             perror("[+] Failed to run command");
-            exit(EXIT_FAILURE);
+            // exit(EXIT_FAILURE);
         }
 
         char output[1024];
@@ -283,8 +288,9 @@ void *handle_client(void *arg)
 
     close(new_socket);
 
-    // 释放套接字描述符的副本
-    free(arg);
+    // free(arg);
+
+    printf("[-] Client %d disconnected.\n", new_socket);
 
     return NULL;
 }
@@ -326,7 +332,7 @@ int main()
         if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
         {
             perror("[-] Accept failed");
-            exit(EXIT_FAILURE);
+            // exit(EXIT_FAILURE);
         }
 
         printf("[+] New connection, socket fd is %d, IP is: %s, port: %d\n", new_socket, inet_ntoa(address.sin_addr), ntohs(address.sin_port));
@@ -336,7 +342,7 @@ int main()
         if (new_sock == NULL)
         {
             perror("[-] Memory allocation failed");
-            exit(EXIT_FAILURE);
+            // exit(EXIT_FAILURE);
         }
         *new_sock = new_socket;
 
