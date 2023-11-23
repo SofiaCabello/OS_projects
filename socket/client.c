@@ -22,7 +22,7 @@ void *handle_connection(void *socket)
     int sock = *(int *)socket;
     char buffer[1024] = {0};
 
-    printf("[+] Client running on thread %ld\n", pthread_self());
+    printf("[+] Client running on thread %ld.\n", pthread_self());
     char reg_or_log[2];
     printf("[+] Choose to register or login(r/l): ");
     scanf("%s", reg_or_log);
@@ -43,7 +43,7 @@ void *handle_connection(void *socket)
         ssize_t len = recv(sock, response, sizeof(response) - 1, 0);
         if (len < 0)
         {
-            perror("[-] Failed to receive message");
+            perror("[-] Failed to receive message.");
             exit(EXIT_FAILURE);
         }
         response[len] = '\0';
@@ -64,7 +64,7 @@ void *handle_connection(void *socket)
         ssize_t len = recv(sock, response, sizeof(response) - 1, 0);
         if (len < 0)
         {
-            perror("[-] Failed to receive message");
+            perror("[-] Failed to receive message.");
             exit(EXIT_FAILURE);
         }
         response[len] = '\0';
@@ -74,7 +74,94 @@ void *handle_connection(void *socket)
         printf("[-] Invalid input.\n");
         exit(EXIT_FAILURE);
     }
+
+    printf("[+] For help, type 'help'.\n");
+    while(true){
+        printf("Client> ");
+        scanf("%s", buffer);
+        char *token = strtok(buffer, " ");
+        if(strcmp(token, "help") == 0)
+        {
+            printf("[+] Commands:\n");
+            printf("[+] help: show this help message.\n");
+            printf("[+] upload <filename>: upload file to server.\n");
+            printf("[+] download <filename>: download file from server.\n");
+            printf("[+] logout: exit the program and logout.\n");
+        }
+        else if (strcmp(token, "upload") == 0)
+        {
+            // 文件上传
+            char filename[50];
+            printf("[+] Filename: ");
+            scanf("%s", filename);
+
+            sprintf(buffer, "upload %s", filename);
+            send(sock, buffer, strlen(buffer), 0);
+
+            char response[1024] = {0};
+            ssize_t len = recv(sock, response, sizeof(response) - 1, 0);
+            if (len < 0)
+            {
+                perror("[-] Failed to receive message.");
+                exit(EXIT_FAILURE);
+            }
+            response[len] = '\0';
+            printf("%s", response);
+
+            if(strcmp(response, "[+] File exists.\n") == 0){
+                continue;
+            }
+
+            FILE *file = fopen(filename, "r");
+            if (file == NULL)
+            {
+                perror("[-] Failed to open file");
+                exit(EXIT_FAILURE);
+            }
+
+            char buffer[1024];
+            while (true)
+            {
+                ssize_t bytes_rcvd = fread(buffer, sizeof(char), sizeof(buffer), file);
+                if (bytes_rcvd <= 0)
+                {
+                    break;
+                }
+
+                send(sock, buffer, bytes_rcvd, 0);
+            }
+            fclose(file);
+        }
+        else if (strcmp(token, "logout") == 0)
+        {
+            send(sock, "logout", strlen("logout"), 0);
+            char response[1024] = {0};
+            ssize_t len = recv(sock, response, sizeof(response) - 1, 0);
+            if (len < 0)
+            {
+                perror("[-] Failed to receive message.");
+                exit(EXIT_FAILURE);
+            }
+            response[len] = '\0';
+            printf("%s", response);
+            break;
+        }
+        else
+        {
+            send(sock, buffer, strlen(buffer), 0);
+            char response[1024] = {0};
+            ssize_t len = recv(sock, response, sizeof(response) - 1, 0);
+            if (len < 0)
+            {
+                perror("[-] Failed to receive message.");
+                exit(EXIT_FAILURE);
+            }
+            response[len] = '\0';
+            printf("%s", response);
+        }
+    }
 }
+
 
 int main(int argc, char const *argv[])
 {

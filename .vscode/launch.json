@@ -1,7 +1,25 @@
 {
-    // 使用 IntelliSense 了解相关属性。 
-    // 悬停以查看现有属性的描述。
-    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": []
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "custom",
+      "name": "Custom launch",
+      "targetCreateCommands": [
+        "target create ${workspaceFolder}/<program>"
+      ],
+      "processCreateCommands": [
+        "settings set target.run-args value1 value2 value3",
+        "process launch"
+      ]
+    },
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/jintaixi/Desktop/Codes/OS/OS_projects/socket",
+      "program": "/Users/jintaixi/Desktop/Codes/OS/OS_projects/socket/build/Debug/outDebug"
+    }
+  ]
 }

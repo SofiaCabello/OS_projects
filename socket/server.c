@@ -49,6 +49,7 @@ bool handle_request(int socket, bool is_admin, char *username)
 
     // 接收客户端请求
     char buffer[1024] = {0};
+    char *command = buffer;
     read(socket, buffer, 1024);
 
     char *action = strtok(buffer, " ");
@@ -138,7 +139,6 @@ bool handle_request(int socket, bool is_admin, char *username)
     else
     {
         // 送Shell脚本执行
-        char *command = strtok(NULL, "\n");
         if (command == NULL)
         {
             char *message = "[-] Command is required.\n";
@@ -233,7 +233,7 @@ void *handle_client(void *arg)
     {
         // 在此添加用户登录逻辑
         char command[1024];
-        sprintf(command, "./check_user.sh %s %s", username, password);
+        sprintf(command, ". ./check_user.sh %s %s", username, password);
         FILE *fp = popen(command, "r");
         if (fp == NULL)
         {

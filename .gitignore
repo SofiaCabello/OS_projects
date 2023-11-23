@@ -3,6 +3,7 @@
 *.dll
 *.so
 *.dylib
+*.json
 
 # 忽略所有编译生成的文件
 *.o
@@ -12,4 +13,13 @@
 reader_writer
 
 # 忽略output下的所有文件
+/.vscode/*
 /socket/output/*
+/socket/output/*
+/socket/build/*
+/socket/client.DSYM/*
+/socket/server.DSYM/*
+/socket/users.txt
+/socket/client
+/socket/server
+
