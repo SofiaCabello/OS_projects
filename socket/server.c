@@ -24,28 +24,31 @@ bool handle_request(int socket, bool is_admin, char *username)
     sprintf(user_dir, "./%s", username);
 
     // 检查用户是否有足够的权限
-    if (getuid() != 0) {
+    if (getuid() != 0)
+    {
         perror("[-] You need to be root to chroot");
         exit(EXIT_FAILURE);
     }
 
     // 创建用户目录
-    if (mkdir(user_dir, 0755) == -1 && errno != EEXIST) {
+    if (mkdir(user_dir, 0755) == -1 && errno != EEXIST)
+    {
         perror("[-] Failed to create user directory");
         exit(EXIT_FAILURE);
     }
 
     // 限制用户访问权限
-    if(chroot(user_dir) == -1){
+    if (chroot(user_dir) == -1)
+    {
         perror("[-] Failed to chroot");
         exit(EXIT_FAILURE);
     }
 
-    if(chdir("/") == -1){
+    if (chdir("/") == -1)
+    {
         perror("[-] Failed to chdir");
         exit(EXIT_FAILURE);
     }
-
 
     // 接收客户端请求
     char buffer[1024] = {0};
@@ -138,31 +141,47 @@ bool handle_request(int socket, bool is_admin, char *username)
     }
     else
     {
-        printf("[+] Command %s received. \n", command);
-        // 送Shell脚本执行
-        if (command == NULL)
+        char tmpfile[] = "command.XXXXXX";
+        int fd = mkstemp(tmpfile);
+        if (fd == -1)
         {
-            char *message = "[-] Command is required.\n";
-            send(socket, message, strlen(message), 0);
+            perror("[-] Failed to create temporary file");
+            return;
+        }
+        close(fd);
+
+        char cmd[1024];
+        sprintf(cmd, "%s > %s", command, tmpfile);
+        int ret = system(cmd);
+        if (ret != 0)
+        {
+            perror("[-] Failed to execute command");
+            remove(tmpfile);
+            return;
+        }
+
+        FILE *file = fopen(tmpfile, "r");
+        if (file == NULL)
+        {
+            perror("[-] Failed to open file");
         }
         else
         {
-            char result[1024] = "[+]";
-            FILE *fp = popen(command, "r");
-            if (fp == NULL)
+            char buffer[1024];
+            while (true)
             {
-                perror("[-] Failed to run command");
-                // exit(EXIT_FAILURE);
-            }
+                ssize_t bytes_read = fread(buffer, sizeof(char), sizeof(buffer), file);
+                if (bytes_read <= 0)
+                {
+                    break;
+                }
 
-            while(fgets(result + 3, sizeof(result) - 3, fp) != NULL)
-            {
-                printf("[debug] here\n");
-                send(socket, result, strlen(result), 0);
+                send(socket, buffer, bytes_read, 0);
             }
-
-            pclose(fp);
+            fclose(file);
         }
+
+        remove(tmpfile);
     }
 
     return true;
@@ -235,7 +254,7 @@ void *handle_client(void *arg)
     {
         // 在此添加用户登录逻辑
         char command[1024];
-        sprintf(command, ". ./check_user.sh %s %s", username, password);
+        sprintf(command, "./check_user.sh %s %s", username, password);
         FILE *fp = popen(command, "r");
         if (fp == NULL)
         {
@@ -244,7 +263,7 @@ void *handle_client(void *arg)
         }
 
         char output[1024];
-        fgets(output, sizeof(output) - 1, fp);
+        fgets(output, sizeof(output), fp);
         pclose(fp);
 
         if (strcmp(output, "valid 0\n") == 0)
