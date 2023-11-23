@@ -2,6 +2,18 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "(lldb) 启动",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "/Users/jintaixi/Desktop/Codes/OS/OS_projects/socket/server",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "/Users/jintaixi/Desktop/Codes/OS/OS_projects/socket",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "lldb"
+    },
+    {
       "type": "lldb",
       "request": "custom",
       "name": "Custom launch",
@@ -18,8 +30,8 @@
       "type": "lldb",
       "request": "launch",
       "args": [],
-      "cwd": "/Users/jintaixi/Desktop/Codes/OS/OS_projects/socket",
-      "program": "/Users/jintaixi/Desktop/Codes/OS/OS_projects/socket/build/Debug/outDebug"
+      "cwd": "/Users/jintaixi/Desktop/Codes/OS/OS_projects",
+      "program": "/Users/jintaixi/Desktop/Codes/OS/OS_projects/build/Debug/outDebug"
     }
   ]
 }

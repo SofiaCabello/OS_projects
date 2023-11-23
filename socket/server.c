@@ -147,6 +147,7 @@ bool handle_request(int socket, bool is_admin, char *username)
         }
         else
         {
+            char result[1024] = "[+]";
             FILE *fp = popen(command, "r");
             if (fp == NULL)
             {
@@ -154,13 +155,9 @@ bool handle_request(int socket, bool is_admin, char *username)
                 // exit(EXIT_FAILURE);
             }
 
-            char result[1024];
-            result[0] = '[';
-            result[1] = '+';
-            result[2] = ']';
-
             while(fgets(result + 3, sizeof(result) - 3, fp) != NULL)
             {
+                printf("[debug] here\n");
                 send(socket, result, strlen(result), 0);
             }
 
