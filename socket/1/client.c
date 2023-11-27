@@ -87,7 +87,7 @@ void *handle_connection(void *socket)
             printf("[+] Commands:\n");
             printf("[+] help: show this help message.\n");
             printf("[+] upload: upload file to server.\n");
-            printf("[+] download: download file from server.\n");
+            printf("[+] download <filename>: download file from server.\n");
             printf("[+] logout: exit the program and logout.\n");
         }
         else if (strcmp(token, "upload") == 0)
@@ -154,69 +154,6 @@ void *handle_connection(void *socket)
                 continue;
             }
 
-        }
-        else if (strcmp(token, "download") == 0)
-        {
-            // 文件下载
-            char filename[50];
-            printf("[+] Filename: ");
-            scanf("%s", filename);
-
-            sprintf(buffer, "download %s", filename);
-            send(sock, buffer, strlen(buffer), 0);
-
-            char response[1024] = {0};
-            ssize_t len_response = recv(sock, response, sizeof(response) - 1, 0);
-            if (len < 0)
-            {
-                perror("[-] Failed to receive message.");
-                exit(EXIT_FAILURE);
-            }
-            response[len_response] = '\0';
-            printf("%s", response);
-
-            if(strcmp(response, "[-] File does not exist.\n") == 0){
-                continue;
-            }
-
-            size_t len;
-            ssize_t b = recv(sock, &len, sizeof(len), 0);
-            if(b == 0)
-            {
-                printf("[-] Connection closed.\n");
-            }
-            if(b < 0)
-            {
-                perror("[-] Failed to receive file.");
-                exit(EXIT_FAILURE);
-            }
-
-            FILE *file = fopen(filename, "w");
-            if (file == NULL)
-            {
-                perror("[-] Failed to open file");
-                exit(EXIT_FAILURE);
-            
-            }
-
-            char file_buffer[1024];
-            size_t ret = 0;
-            while ( ret < len )
-            {
-                ssize_t b = recv(sock, file_buffer, sizeof(file_buffer), 0);
-                if(b == 0)
-                {
-                    printf("[-] Connection closed.\n");
-                }
-                if(b < 0)
-                {
-                    perror("[-] Failed to receive file.");
-                    exit(EXIT_FAILURE);
-                }
-                fwrite(file_buffer, 1, b, file);
-                ret += b;
-            }
-            fclose(file);
         }
         else if (strcmp(token, "logout") == 0)
         {

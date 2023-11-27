@@ -14,46 +14,20 @@
 #include <errno.h>
 
 #define PORT 8080
-#define MAX_CLIENTS 5
 #define USER 0
 #define ADMIN 1
+
+int MAX_CLIENTS = 5;
 
 bool handle_request(int socket, bool is_admin, char *username)
 {
     char user_dir[50];
     sprintf(user_dir, "./%s", username);
 
-    // 检查用户是否有足够的权限
-    if (getuid() != 0)
-    {
-        perror("[-] You need to be root to chroot");
-        exit(EXIT_FAILURE);
-    }
-
-    // 创建用户目录
-    if (mkdir(user_dir, 0755) == -1 && errno != EEXIST)
-    {
-        perror("[-] Failed to create user directory");
-        exit(EXIT_FAILURE);
-    }
-
-    // 限制用户访问权限
-    if (chroot(user_dir) == -1)
-    {
-        perror("[-] Failed to chroot");
-        exit(EXIT_FAILURE);
-    }
-
-    if (chdir("/") == -1)
-    {
-        perror("[-] Failed to chdir");
-        exit(EXIT_FAILURE);
-    }
-
     // 接收客户端请求
     char buffer[1024] = {0};
-    char *command = buffer;
     read(socket, buffer, 1024);
+    char *command = strdup(buffer);
 
     char *action = strtok(buffer, " ");
 
@@ -77,25 +51,51 @@ bool handle_request(int socket, bool is_admin, char *username)
         {
             if (access(filename, F_OK) == -1)
             {
-                FILE *file = fopen(filename, "w");
+                FILE *file = fopen(filename, "w");  
                 if (file == NULL)
                 {
                     perror("[-] Failed to open file");
                     // exit(EXIT_FAILURE);
                 }
 
-                char buffer[1024];
+                size_t len;
+                recv(socket, &len, sizeof(len), 0);
+                printf("[+] File size: %zu\n", len);
+                char file_buffer[len];
+
+                size_t ret = 0;
+                while (ret < len)
+                {
+                    ssize_t b = recv(socket, file_buffer + ret, len - ret, 0);
+                    if(b == 0)
+                    {
+                        printf("[-] Connection closed.\n");
+                    }
+                    if(b < 0)
+                    {
+                        perror("[-] Failed to receive file.");
+                        exit(EXIT_FAILURE);
+                    }
+                    ret += b;
+                }
+                fwrite(file_buffer, 1, len, file);
+                char *message = "[+] File uploaded successfully.\n";
+                send(socket, message, strlen(message), 0);
+                fclose(file);
+            }
+            else
+            {
+                char *message = "[+] File exists.\n";
+                send(socket, message, strlen(message), 0);
+                char file_buffer[1024];
                 while (true)
                 {
-                    ssize_t bytes_rcvd = recv(socket, buffer, sizeof(buffer), 0);
+                    ssize_t bytes_rcvd = recv(socket, file_buffer, sizeof(file_buffer), 0);
                     if (bytes_rcvd <= 0)
                     {
                         break;
                     }
-
-                    fwrite(buffer, sizeof(char), bytes_rcvd, file);
                 }
-                fclose(file);
             }
         }
     }
@@ -141,6 +141,7 @@ bool handle_request(int socket, bool is_admin, char *username)
     }
     else
     {
+        // 执行命令
         char tmpfile[] = "command.XXXXXX";
         int fd = mkstemp(tmpfile);
         if (fd == -1)
@@ -248,6 +249,36 @@ void *handle_client(void *arg)
             char *message = "[+] Registration successful.\n";
             send(new_socket, message, strlen(message), 0);
             is_valid = true;
+
+            char user_dir[50];
+            sprintf(user_dir, "./%s", username);
+
+            // 检查用户是否有足够的权限
+            if (getuid() != 0)
+            {
+                perror("[-] You need to be root to chroot");
+                exit(EXIT_FAILURE);
+            }
+
+            // 创建用户目录
+            if (mkdir(user_dir, 0755) == -1 && errno != EEXIST)
+            {
+                perror("[-] Failed to create user directory");
+                exit(EXIT_FAILURE);
+            }
+
+            // 限制用户访问权限
+            if (chroot(user_dir) == -1)
+            {
+                perror("[-] Failed to chroot");
+                exit(EXIT_FAILURE);
+            }
+
+            if (chdir("/") == -1)
+            {
+                perror("[-] Failed to chdir");
+                exit(EXIT_FAILURE);
+            }
         }
     }
     else if (strcmp(action, "login") == 0)
@@ -285,6 +316,15 @@ void *handle_client(void *arg)
         {
             char *message = "[-] Invalid username or password.\n";
             send(new_socket, message, strlen(message), 0);
+        }
+
+        // 切换到用户目录
+        char user_dir[50];
+        sprintf(user_dir, "./%s", username);
+
+        if(chdir(user_dir) == -1)
+        {
+            perror("[-] Failed to change directory"); 
         }
     }
     else
@@ -361,6 +401,7 @@ int main()
             // exit(EXIT_FAILURE);
         }
         *new_sock = new_socket;
+        MAX_CLIENTS -= 1;
 
         pthread_t tid;
         pthread_create(&tid, NULL, handle_client, &new_socket);
