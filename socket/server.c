@@ -40,55 +40,7 @@ bool handle_request(int socket, bool is_admin, char *username)
     {
         // 文件下载
         char *filename = strtok(NULL, " ");
-        if (filename == NULL)
-        {
-            char *message = "[-] Filename is required.\n";
-            send(socket, message, strlen(message), 0);
-        }
-        else
-        {
-            if (access(filename, F_OK) == -1)
-            {
-                char *message = "[-] File does not exist.\n";
-                send(socket, message, strlen(message), 0);
-            }
-            else
-            {
-                FILE *file = fopen(filename, "r");
-                if (file == NULL)
-                {
-                    perror("[-] Failed to open file");
-                    // exit(EXIT_FAILURE);
-                }
-                char *message = "[+] File exists.\n";
-                send(socket, message, strlen(message), 0);
-
-                struct stat st;
-                stat(filename, &st);
-                size_t len = st.st_size;
-                printf("[+] File size: %zu\n", len);
-
-                send(socket, &len, sizeof(len), 0);
-
-                char buffer[len];
-                size_t ret = 0;
-                while(ret < len)
-                {
-                    ssize_t b = send(socket, buffer + ret, len - ret, 0);
-                    if(b == 0)
-                    {
-                        printf("[-] Connection closed.\n");
-                    }
-                    if(b < 0)
-                    {
-                        perror("[-] Failed to read file.");
-                        exit(EXIT_FAILURE);
-                    }
-                    ret += b;
-                }
-                fclose(file);
-            }
-        }
+        send_file(filename, socket);
     }
     else
     {
