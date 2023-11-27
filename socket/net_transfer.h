@@ -32,8 +32,5 @@
 
 void send_file(char *filename, int socket);
 void recv_file(char *filename, int socket);
-void send_response(int socket, int response);
-void recv_response(int socket, int *response);
-int *code(int CODE);
 
 #endif

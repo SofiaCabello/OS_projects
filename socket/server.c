@@ -1,9 +1,5 @@
 #include "net_transfer.h"
 
-#define PORT 8080
-#define USER 0
-#define ADMIN 1
-
 int MAX_CLIENTS = 5;
 
 bool handle_request(int socket, bool is_admin, char *username)
@@ -24,9 +20,9 @@ bool handle_request(int socket, bool is_admin, char *username)
         char *message = "[+] Logout successful.\n";
         send(socket, message, strlen(message), 0);
         // 切换到原目录
-        if(chdir("~/OSP/OS_projects/socket") == -1)
+        if (chdir("~/OSP/OS_projects/socket") == -1)
         {
-            perror("[-] Failed to change directory"); 
+            perror("[-] Failed to change directory");
         }
         return false;
     }
@@ -41,6 +37,17 @@ bool handle_request(int socket, bool is_admin, char *username)
         // 文件下载
         char *filename = strtok(NULL, " ");
         send_file(filename, socket);
+
+        char response[BUFFER];
+        recv(socket, response, sizeof(response), 0);
+        if (strcmp(response, SUCCESS) == 0)
+        {
+            printf("[+] Upload successful.\n");
+        }
+        else if (strcmp(response, FILE_EXIST) == 0)
+        {
+            printf("[-] File already exists.\n");
+        }
     }
     else
     {
@@ -53,15 +60,20 @@ bool handle_request(int socket, bool is_admin, char *username)
             return;
         }
         close(fd);
-
         char cmd[1024];
         sprintf(cmd, "%s > %s", command, tmpfile);
         int ret = system(cmd);
-        if (ret != 0)
+        if (WIFEXITED(ret))
         {
-            perror("[-] Failed to execute command");
-            remove(tmpfile);
-            return;
+            int exit_status = WEXITSTATUS(ret);
+            if (exit_status != 0)
+            {
+                printf("[-] Failed to execute command, exit status: %d\n", exit_status);
+            }
+        }
+        else
+        {
+            printf("[-] Command terminated by signal\n");
         }
 
         FILE *file = fopen(tmpfile, "r");
@@ -225,9 +237,9 @@ void *handle_client(void *arg)
         char user_dir[50];
         sprintf(user_dir, "./%s", username);
 
-        if(chdir(user_dir) == -1)
+        if (chdir(user_dir) == -1)
         {
-            perror("[-] Failed to change directory"); 
+            perror("[-] Failed to change directory");
         }
     }
     else

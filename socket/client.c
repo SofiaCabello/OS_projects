@@ -47,6 +47,7 @@ void *handle_connection(void *socket)
         scanf("%s", username);
         printf("[+] Password: ");
         scanf("%s", password);
+        getchar();
 
         sprintf(buffer, "%s %s %s", LOGIN, username, password);
         send(sock, buffer, strlen(buffer), 0);
@@ -69,9 +70,11 @@ void *handle_connection(void *socket)
     printf("[+] For help, type 'help'.\n");
     while(true){
         printf("Client> ");
-        scanf("%s", buffer);
-        char *command = buffer;
-        char *token = strtok(buffer, " ");
+        char input_buffer[BUFFER];
+        scanf("%[^\n]", input_buffer); // 读取输入的命令
+        getchar(); // 读取换行符
+        char *command = strdup(input_buffer);
+        char *token = strtok(input_buffer, " ");
         if(strcmp(token, "help") == 0)
         {
             printf("[+] Commands:\n");
@@ -91,6 +94,17 @@ void *handle_connection(void *socket)
             send(sock, buffer, strlen(buffer), 0);
 
             send_file(filename, sock); // 发送文件
+
+            char response[BUFFER];
+            recv(sock, response, sizeof(response), 0);
+            if(strcmp(response, SUCCESS) == 0)
+            {
+                printf("[+] Upload successful.\n");
+            }
+            else if (strcmp(response, FILE_EXIST) == 0)
+            {
+                printf("[-] File already exists.\n");
+            }
         }
         else if (strcmp(token, "download") == 0)
         {
@@ -120,7 +134,7 @@ void *handle_connection(void *socket)
         }
         else
         {
-            send(sock, command, strlen(buffer), 0);
+            send(sock, command, strlen(command), 0);
             char response[1024] = {0};
             ssize_t len = recv(sock, response, sizeof(response) - 1, 0);
             if (len < 0)
