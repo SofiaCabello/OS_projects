@@ -1,16 +1,4 @@
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <arpa/inet.h>
-#include <stdbool.h>
-#include <sys/stat.h>
+#include "net_transfer.h"
 
 #define PORT 8080
 #define USER 0
@@ -49,7 +37,9 @@ void *handle_connection(void *socket)
         }
         response[len] = '\0';
         printf("%s", response);
-    }else if(strcmp(reg_or_log, "l") == 0){
+    }
+    else if(strcmp(reg_or_log, "l") == 0)
+    {
         // 登录
         char username[50];
         char password[50];
@@ -100,60 +90,7 @@ void *handle_connection(void *socket)
             sprintf(buffer, "upload %s", filename);
             send(sock, buffer, strlen(buffer), 0);
 
-            struct stat st;
-            stat(filename, &st);
-            size_t len = st.st_size;
-            printf("[+] File size: %ld\n", len);
-
-            send(sock, &len, sizeof(len), 0);
-
-            FILE *file = fopen(filename, "r");
-            if (file == NULL)
-            {
-                perror("[-] Failed to open file");
-                exit(EXIT_FAILURE);
-            
-            }
-            
-            char file_buffer[1024];
-            size_t bytes_read;
-            if(fread(file_buffer, 1, len, file) != len)
-            {
-                perror("[-] Failed to read file");
-                exit(EXIT_FAILURE);
-            }
-
-            size_t ret = 0;
-            while ( ret < len )
-            {
-                ssize_t b = send(sock, file_buffer + ret, len - ret, 0);
-                if(b == 0)
-                {
-                    printf("[-] Connection closed.\n");
-                }
-                if(b < 0)
-                {
-                    perror("[-] Failed to send file.");
-                    exit(EXIT_FAILURE);
-                }
-                ret += b;
-            }
-            fclose(file);
-
-            char response[1024] = {0};
-            ssize_t len_response = recv(sock, response, sizeof(response) - 1, 0);
-            if (len < 0)
-            {
-                perror("[-] Failed to receive message.");
-                exit(EXIT_FAILURE);
-            }
-            response[len_response] = '\0';
-            printf("%s", response);
-
-            if(strcmp(response, "[+] File exists.\n") == 0){
-                continue;
-            }
-
+            send_file(filename, sock); // 发送文件
         }
         else if (strcmp(token, "download") == 0)
         {
@@ -165,58 +102,7 @@ void *handle_connection(void *socket)
             sprintf(buffer, "download %s", filename);
             send(sock, buffer, strlen(buffer), 0);
 
-            char response[1024] = {0};
-            ssize_t len_response = recv(sock, response, sizeof(response) - 1, 0);
-            if (len < 0)
-            {
-                perror("[-] Failed to receive message.");
-                exit(EXIT_FAILURE);
-            }
-            response[len_response] = '\0';
-            printf("%s", response);
-
-            if(strcmp(response, "[-] File does not exist.\n") == 0){
-                continue;
-            }
-
-            size_t len;
-            ssize_t b = recv(sock, &len, sizeof(len), 0);
-            if(b == 0)
-            {
-                printf("[-] Connection closed.\n");
-            }
-            if(b < 0)
-            {
-                perror("[-] Failed to receive file.");
-                exit(EXIT_FAILURE);
-            }
-
-            FILE *file = fopen(filename, "w");
-            if (file == NULL)
-            {
-                perror("[-] Failed to open file");
-                exit(EXIT_FAILURE);
-            
-            }
-
-            char file_buffer[1024];
-            size_t ret = 0;
-            while ( ret < len )
-            {
-                ssize_t b = recv(sock, file_buffer, sizeof(file_buffer), 0);
-                if(b == 0)
-                {
-                    printf("[-] Connection closed.\n");
-                }
-                if(b < 0)
-                {
-                    perror("[-] Failed to receive file.");
-                    exit(EXIT_FAILURE);
-                }
-                fwrite(file_buffer, 1, b, file);
-                ret += b;
-            }
-            fclose(file);
+            recv_file(filename, sock); // 接收文件
         }
         else if (strcmp(token, "logout") == 0)
         {
@@ -280,3 +166,4 @@ int main(int argc, char const *argv[])
 
     return 0;
 }
+

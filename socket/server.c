@@ -1,17 +1,4 @@
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <netinet/in.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <arpa/inet.h>
-#include <stdbool.h>
-#include <errno.h>
+#include "net_transfer.h"
 
 #define PORT 8080
 #define USER 0
@@ -36,68 +23,18 @@ bool handle_request(int socket, bool is_admin, char *username)
         // 用户登出
         char *message = "[+] Logout successful.\n";
         send(socket, message, strlen(message), 0);
+        // 切换到原目录
+        if(chdir("~/OSP/OS_projects/socket") == -1)
+        {
+            perror("[-] Failed to change directory"); 
+        }
         return false;
     }
     else if (strcmp(action, "upload") == 0)
     {
         // 文件上传
         char *filename = strtok(NULL, " ");
-        if (filename == NULL)
-        {
-            char *message = "[-] Filename is required.\n";
-            send(socket, message, strlen(message), 0);
-        }
-        else
-        {
-            if (access(filename, F_OK) == -1)
-            {
-                FILE *file = fopen(filename, "w");  
-                if (file == NULL)
-                {
-                    perror("[-] Failed to open file");
-                    // exit(EXIT_FAILURE);
-                }
-
-                size_t len;
-                recv(socket, &len, sizeof(len), 0);
-                printf("[+] File size: %zu\n", len);
-                char file_buffer[len];
-
-                size_t ret = 0;
-                while (ret < len)
-                {
-                    ssize_t b = recv(socket, file_buffer + ret, len - ret, 0);
-                    if(b == 0)
-                    {
-                        printf("[-] Connection closed.\n");
-                    }
-                    if(b < 0)
-                    {
-                        perror("[-] Failed to receive file.");
-                        exit(EXIT_FAILURE);
-                    }
-                    ret += b;
-                }
-                fwrite(file_buffer, 1, len, file);
-                char *message = "[+] File uploaded successfully.\n";
-                send(socket, message, strlen(message), 0);
-                fclose(file);
-            }
-            else
-            {
-                char *message = "[+] File exists.\n";
-                send(socket, message, strlen(message), 0);
-                char file_buffer[1024];
-                while (true)
-                {
-                    ssize_t bytes_rcvd = recv(socket, file_buffer, sizeof(file_buffer), 0);
-                    if (bytes_rcvd <= 0)
-                    {
-                        break;
-                    }
-                }
-            }
-        }
+        recv_file(filename, socket);
     }
     else if (strcmp(action, "download") == 0)
     {
@@ -123,17 +60,31 @@ bool handle_request(int socket, bool is_admin, char *username)
                     perror("[-] Failed to open file");
                     // exit(EXIT_FAILURE);
                 }
+                char *message = "[+] File exists.\n";
+                send(socket, message, strlen(message), 0);
 
-                char buffer[1024];
-                while (true)
+                struct stat st;
+                stat(filename, &st);
+                size_t len = st.st_size;
+                printf("[+] File size: %zu\n", len);
+
+                send(socket, &len, sizeof(len), 0);
+
+                char buffer[len];
+                size_t ret = 0;
+                while(ret < len)
                 {
-                    ssize_t bytes_read = fread(buffer, sizeof(char), sizeof(buffer), file);
-                    if (bytes_read <= 0)
+                    ssize_t b = send(socket, buffer + ret, len - ret, 0);
+                    if(b == 0)
                     {
-                        break;
+                        printf("[-] Connection closed.\n");
                     }
-
-                    send(socket, buffer, bytes_read, 0);
+                    if(b < 0)
+                    {
+                        perror("[-] Failed to read file.");
+                        exit(EXIT_FAILURE);
+                    }
+                    ret += b;
                 }
                 fclose(file);
             }
