@@ -24,6 +24,7 @@ void *handle_connection(void *socket)
         scanf("%s", username);
         printf("[+] Password: ");
         scanf("%s", password);
+        getchar();
 
         sprintf(buffer, "%s %s %s", REGISTER, username, password);
         send(sock, buffer, strlen(buffer), 0);
@@ -89,6 +90,7 @@ void *handle_connection(void *socket)
             char filename[50];
             printf("[+] Filename: ");
             scanf("%s", filename);
+            getchar();
 
             sprintf(buffer, "upload %s", filename);
             send(sock, buffer, strlen(buffer), 0);
@@ -112,6 +114,7 @@ void *handle_connection(void *socket)
             char filename[50];
             printf("[+] Filename: ");
             scanf("%s", filename);
+            getchar();
 
             sprintf(buffer, "download %s", filename);
             send(sock, buffer, strlen(buffer), 0);

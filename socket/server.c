@@ -4,12 +4,14 @@ int MAX_CLIENTS = 5;
 
 bool handle_request(int socket, bool is_admin, char *username)
 {
-    char user_dir[50];
-    sprintf(user_dir, "./%s", username);
-
     // 接收客户端请求
     char buffer[1024] = {0};
     read(socket, buffer, 1024);
+
+    char user_dir[50];
+    sprintf(user_dir, "/home/%s", username);
+    chdir(user_dir);
+
     char *command = strdup(buffer);
 
     char *action = strtok(buffer, " ");
@@ -19,11 +21,6 @@ bool handle_request(int socket, bool is_admin, char *username)
         // 用户登出
         char *message = "[+] Logout successful.\n";
         send(socket, message, strlen(message), 0);
-        // 切换到原目录
-        if (chdir("~/OSP/OS_projects/socket") == -1)
-        {
-            perror("[-] Failed to change directory");
-        }
         return false;
     }
     else if (strcmp(action, "upload") == 0)
@@ -117,6 +114,14 @@ void *handle_client(void *arg)
     char *username = strtok(NULL, " ");
     char *password = strtok(NULL, " ");
 
+    char program_dir[BUFFER];
+    sprintf(program_dir, "/home/kagurazaka/OS_Projects/socket");
+    if(chdir(program_dir) == -1)
+    {
+        perror("[-] Failed to change directory");
+        // exit(EXIT_FAILURE);
+    }
+
     if (action == NULL || username == NULL || password == NULL)
     {
         char *message = "[-] Invalid request.\n";
@@ -124,7 +129,7 @@ void *handle_client(void *arg)
     }
     else if (strcmp(action, "register") == 0)
     {
-        // 在此添加用户注册逻辑
+        // 用户注册逻辑
         FILE *file = fopen("users.txt", "r");
         if (file == NULL)
         {
@@ -161,39 +166,24 @@ void *handle_client(void *arg)
             fprintf(file, "%s %s %d\n", username, password, role);
             fclose(file);
             printf("[+] Registering new user: %s\n", username);
+            // 执行脚本./create_user.sh进行Linux用户注册。传入参数：username password
+            char cmd[BUFFER];
+            sprintf(cmd, "./create_user.sh %s %s", username, password);
+            if(system(cmd) == -1)
+            {
+                perror("[-] Failed to run command");
+                // exit(EXIT_FAILURE);
+            }
+            else
+            {
+                printf("[+] User %s created.\n", username);
+                char user_dir[BUFFER];
+                sprintf(user_dir, "/home/%s", username);
+                chdir(user_dir);
+            }
             char *message = "[+] Registration successful.\n";
             send(new_socket, message, strlen(message), 0);
-            is_valid = true;
-
-            char user_dir[50];
-            sprintf(user_dir, "./%s", username);
-
-            // 检查用户是否有足够的权限
-            if (getuid() != 0)
-            {
-                perror("[-] You need to be root to chroot");
-                exit(EXIT_FAILURE);
-            }
-
-            // 创建用户目录
-            if (mkdir(user_dir, 0755) == -1 && errno != EEXIST)
-            {
-                perror("[-] Failed to create user directory");
-                exit(EXIT_FAILURE);
-            }
-
-            // 限制用户访问权限
-            if (chroot(user_dir) == -1)
-            {
-                perror("[-] Failed to chroot");
-                exit(EXIT_FAILURE);
-            }
-
-            if (chdir("/") == -1)
-            {
-                perror("[-] Failed to chdir");
-                exit(EXIT_FAILURE);
-            }
+            is_valid = true;  
         }
     }
     else if (strcmp(action, "login") == 0)
@@ -215,6 +205,10 @@ void *handle_client(void *arg)
         if (strcmp(output, "valid 0\n") == 0)
         {
             printf("[+] Logging in user: %s\n", username);
+            char user_dir[BUFFER];
+            sprintf(user_dir, "/home/%s", username);
+            chdir(user_dir);
+            printf("[+] Current directory: %s\n", getcwd(NULL, 0));
             char *message = "[+] Login successful.\n";
             send(new_socket, message, strlen(message), 0);
             is_valid = true;
@@ -233,14 +227,6 @@ void *handle_client(void *arg)
             send(new_socket, message, strlen(message), 0);
         }
 
-        // 切换到用户目录
-        char user_dir[50];
-        sprintf(user_dir, "./%s", username);
-
-        if (chdir(user_dir) == -1)
-        {
-            perror("[-] Failed to change directory");
-        }
     }
     else
     {
@@ -307,6 +293,7 @@ int main()
         }
 
         printf("[+] New connection, socket fd is %d, IP is: %s, port: %d\n", new_socket, inet_ntoa(address.sin_addr), ntohs(address.sin_port));
+        printf("[!] Current directory: %s\n", getcwd(NULL, 0));
 
         // 创建套接字描述符的副本
         int *new_sock = malloc(sizeof *new_sock);
