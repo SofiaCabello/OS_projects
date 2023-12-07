@@ -1,6 +1,10 @@
 #include "net_transfer.h"
 
+// 在这里修改程序所在路径
+#define PROGRAM_DIR "/home/kagurazaka/OSP/OS_projects/socket"
+
 int MAX_CLIENTS = 5;
+
 
 bool handle_request(int socket, bool is_admin, char *username)
 {
@@ -65,7 +69,10 @@ bool handle_request(int socket, bool is_admin, char *username)
             int exit_status = WEXITSTATUS(ret);
             if (exit_status != 0)
             {
-                printf("[-] Failed to execute command, exit status: %d\n", exit_status);
+                char msg[50];
+                sprintf(msg, "[-] Command exited with status %d\n", exit_status);
+                send(socket, msg, strlen(msg), 0);
+                return true;
             }
         }
         else
@@ -81,15 +88,20 @@ bool handle_request(int socket, bool is_admin, char *username)
         else
         {
             char buffer[1024];
-            while (true)
+            ssize_t bytes_read = fread(buffer, sizeof(char), sizeof(buffer), file);
+            if (bytes_read <= 0)
             {
-                ssize_t bytes_read = fread(buffer, sizeof(char), sizeof(buffer), file);
-                if (bytes_read <= 0)
+                // 如果没有任何输出，发送一条成功消息
+                char success_msg[] = "[+] Command executed, but no output generated.\n";
+                send(socket, success_msg, sizeof(success_msg), 0);
+            }
+            else
+            {
+                do
                 {
-                    break;
-                }
-
-                send(socket, buffer, bytes_read, 0);
+                    send(socket, buffer, bytes_read, 0);
+                    bytes_read = fread(buffer, sizeof(char), sizeof(buffer), file);
+                } while (bytes_read > 0);
             }
             fclose(file);
         }
@@ -115,7 +127,7 @@ void *handle_client(void *arg)
     char *password = strtok(NULL, " ");
 
     char program_dir[BUFFER];
-    sprintf(program_dir, "/home/kagurazaka/OS_Projects/socket");
+    sprintf(program_dir, "%s", PROGRAM_DIR);
     if(chdir(program_dir) == -1)
     {
         perror("[-] Failed to change directory");

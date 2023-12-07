@@ -1,6 +1,6 @@
 #!/bin/bash
 
-username=$1
+username=$1 
 password=$2
 
 while IFS=' ' read -r stored_username stored_password stored_role;

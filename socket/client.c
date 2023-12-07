@@ -145,8 +145,14 @@ void *handle_connection(void *socket)
                 perror("[-] Failed to receive message.");
                 exit(EXIT_FAILURE);
             }
+            if(response == NULL)
+            {
+                printf("[+] Command executed.\n");
+                continue;
+            }
             response[len] = '\0';
             printf("%s", response);
+            
         }
     }
 }
