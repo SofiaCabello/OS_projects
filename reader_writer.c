@@ -13,15 +13,15 @@ int readcount = 0, waitreaders = 0;
 void *reader(void *param) {
     do {
         sem_wait(&mutex);
-        waitreaders++;
+        waitreaders++;  
         sem_post(&mutex);
 
         sem_wait(&access_order);
         sem_wait(&mutex);
         waitreaders--;
-        readcount++;
         if(readcount == 0)
             sem_wait(&wrt);
+        readcount++;
         sem_post(&mutex);
         sem_post(&access_order);
         
